@@ -18,6 +18,7 @@ pd.set_option('display.width', 2000)
 is_kaggle = os.environ['HOME'] == '/tmp'
 
 zipext = '' if is_kaggle else '.zip'
+train_file = 'train' if is_kaggle else 'sample'
 
 
 def evaluate(train, test, unique_id, target):
@@ -49,7 +50,7 @@ def run():
 
     # load data
 
-    train = pd.read_csv(f'../input/train.csv{zipext}')
+    train = pd.read_csv(f'../input/{train_file}.csv{zipext}')
     test = pd.read_csv(f'../input/test.csv{zipext}')
 
     test_predictions, train_score = evaluate(train, test, unique_id, target)
