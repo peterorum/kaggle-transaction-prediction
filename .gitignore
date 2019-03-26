@@ -110,6 +110,7 @@ venv.bak/
 *.sublime-*
 
 input/
+plots/
 nohup.out
 
 submission*.csv

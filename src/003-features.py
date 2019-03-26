@@ -1,5 +1,5 @@
 # feature importance
-# local score
+# local score 0.570
 # kaggle score
 # minimize score
 
@@ -22,7 +22,7 @@ pd.set_option('display.width', 2000)
 is_kaggle = os.environ['HOME'] == '/tmp'
 
 zipext = '' if is_kaggle else '.zip'
-train_file = 'train' # if is_kaggle else 'sample'
+train_file = 'train'  # if is_kaggle else 'sample'
 
 start_time = time()
 
@@ -307,6 +307,8 @@ def get_feature_importance(train, test, unique_id, target):
     # sort features according to importance
     feature_importances = feature_importances.sort_values('importance', ascending=False).reset_index()
 
+    most_important_features = feature_importances[0:10]['feature'].tolist()
+
     # normalize the feature importances to add up to one
     feature_importances['importance_normalized'] = feature_importances['importance'] / feature_importances['importance'].sum()
     feature_importances['cumulative_importance'] = np.cumsum(feature_importances['importance_normalized'])
@@ -325,7 +327,7 @@ def get_feature_importance(train, test, unique_id, target):
     if len(features_to_drop) > 0:
         print(feature_importances)
 
-        print(f'features under {threshold} importance:')
+        print(f'features to drop, under {threshold} importance:')
         pprint(features_to_drop)
 
         train = train.drop(features_to_drop, axis=1)
@@ -333,7 +335,7 @@ def get_feature_importance(train, test, unique_id, target):
 
     print(f'{((time() - start_time) / 60):.0f} mins\n')
 
-    return train, test
+    return train, test, most_important_features
 
 # --- remove collinear features
 
@@ -364,11 +366,11 @@ def get_collinear_features(train, test, unique_id, target):
     # arithmetic features
 
 
-def get_arithmetic_features(train, test, unique_id, target):
+def get_arithmetic_features(train, test, unique_id, target, cols):
 
     print('get_arithmetic_features')
 
-    numeric_cols = [col for col in train.columns
+    numeric_cols = [col for col in cols
                     if (train[col].dtype == 'int64') | (train[col].dtype == 'float64')]
 
     numeric_cols = remove_keys(numeric_cols, [unique_id, target])
@@ -432,7 +434,9 @@ def run():
 
     train, test = get_custom_features(train, test, unique_id, target)
 
-    train, test = get_arithmetic_features(train, test, unique_id, target)
+    train, test, most_important_cols = get_feature_importance(train, test, unique_id, target)
+
+    train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
 
     train, test = get_categorical_data(train, test, unique_id, target)
 
@@ -440,7 +444,7 @@ def run():
 
     train, test = get_feature_selection(train, test, unique_id, target)
 
-    train, test = get_feature_importance(train, test, unique_id, target)
+    train, test, _ = get_feature_importance(train, test, unique_id, target)
 
     # ----------
 
