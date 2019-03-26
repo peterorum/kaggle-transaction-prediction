@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if [ -z "$1" ]; then
+    echo "Add message"
+    exit 1
+fi
+
+zip -u submission.csv.zip submission.csv
+
+kaggle competitions submit -c santander-customer-transaction-prediction -f submission.csv.zip  -m "$1"
+
+rm submission.csv.zip
