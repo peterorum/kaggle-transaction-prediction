@@ -1,6 +1,6 @@
 # feature importance
-# local score 0.578
-# kaggle score 0.546
+# local score 0.909
+# kaggle score 0.854
 # minimize score
 
 import os
@@ -34,7 +34,7 @@ def evaluate(train, test, unique_id, target):
 
     # binary
     # 'metric': 'auc',
-    lgb_model = lgb.LGBMClassifier(nthread=4, n_jobs=-1, verbose=-1, objective='binary', metric='auc')
+    lgb_model = lgb.LGBMRegressor(nthread=4, n_jobs=-1, verbose=-1, objective='binary', metric='auc')
 
     x_train = train.drop([target, unique_id], axis=1)
     y_train = train[target]

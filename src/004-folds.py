@@ -1,6 +1,6 @@
 # feature importance
-# local score 0.578
-# kaggle score 0.546
+# local score worse
+# kaggle score
 # minimize score
 
 import os
@@ -47,11 +47,11 @@ def evaluate(train, test, unique_id, target):
     x_test = test[x_train.columns]
 
     # binary, auc
-    lgb_model = lgb.LGBMClassifier(nthread=4, n_jobs=-1, verbose=-1, objective='binary', metric='auc',
-                                   bagging_freq=5, bagging_fraction=0.4, boost_from_average='false',
-                                   boost='gbdt', feature_fraction=0.05, learning_rate=0.01, max_depth=-1,
-                                   min_data_in_leaf=80, min_sum_hessian_in_leaf=10.0, num_leaves=13,
-                                   num_threads=8, tree_learner='serial')
+    lgb_model = lgb.LGBMRegressor(nthread=4, n_jobs=-1, verbose=-1, objective='binary', metric='auc',
+                                  bagging_freq=5, bagging_fraction=0.4, boost_from_average='false',
+                                  boost='gbdt', feature_fraction=0.05, learning_rate=0.01, max_depth=-1,
+                                  min_data_in_leaf=80, min_sum_hessian_in_leaf=10.0, num_leaves=13,
+                                  num_threads=8, tree_learner='serial')
 
     train_predictions = np.zeros(len(train))
     test_predictions = np.zeros(test.shape[0])
@@ -66,6 +66,7 @@ def evaluate(train, test, unique_id, target):
                       verbose=verbose_eval, early_stopping_rounds=stop_rounds)
 
         train_prediction = lgb_model.predict(x_train, num_iteration=lgb_model.best_iteration_)
+
         train_predictions += train_prediction / fold_splits
 
         test_prediction = lgb_model.predict(x_test, num_iteration=lgb_model.best_iteration_)
@@ -460,25 +461,25 @@ def run():
     train = pd.read_csv(f'../input/{train_file}.csv{zipext}')
     test = pd.read_csv(f'../input/test.csv{zipext}')
 
-    # train, test = get_many_missing_values(train, test, unique_id, target)
+    train, test = get_many_missing_values(train, test, unique_id, target)
 
-    # train, test = replace_missing_values(train, test, unique_id, target)
+    train, test = replace_missing_values(train, test, unique_id, target)
 
-    # train, test = get_column_differences(train, test, unique_id, target)
+    train, test = get_column_differences(train, test, unique_id, target)
 
-    # train, test = get_custom_features(train, test, unique_id, target)
+    train, test = get_custom_features(train, test, unique_id, target)
 
-    # train, test, most_important_cols = get_feature_importance(train, test, unique_id, target)
+    train, test, most_important_cols = get_feature_importance(train, test, unique_id, target)
 
-    # train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
+    train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
 
-    # train, test = get_categorical_data(train, test, unique_id, target)
+    train, test = get_categorical_data(train, test, unique_id, target)
 
-    # train, test = get_collinear_features(train, test, unique_id, target)
+    train, test = get_collinear_features(train, test, unique_id, target)
 
-    # train, test = get_feature_selection(train, test, unique_id, target)
+    train, test = get_feature_selection(train, test, unique_id, target)
 
-    # train, test, _ = get_feature_importance(train, test, unique_id, target)
+    train, test, _ = get_feature_importance(train, test, unique_id, target)
 
     # ----------
 
