@@ -1,6 +1,6 @@
 # feature importance
-# local score 0.570
-# kaggle score
+# local score 0.578
+# kaggle score 0.546
 # minimize score
 
 import os
@@ -14,6 +14,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import PolynomialFeatures
 
 pd.options.display.float_format = '{:.4f}'.format
 pd.set_option('display.max_columns', None)
@@ -363,7 +364,61 @@ def get_collinear_features(train, test, unique_id, target):
 
     return train, test
 
-    # arithmetic features
+
+# polynomial features
+
+
+def get_polynomial_features(train, test, unique_id, target):
+
+    print('get_polynomial_features')
+
+    # make a new dataframe for polynomial features
+
+    numeric_cols = [col for col in train.columns
+                    if (col != target) & (col != unique_id) &
+                    ((train[col].dtype == 'int64') | (train[col].dtype == 'float64'))]
+
+    poly_features = train[numeric_cols]
+    poly_features_test = test[numeric_cols]
+
+    poly_target = train[target]
+
+    # specify degree
+    poly_transformer = PolynomialFeatures(degree=2)
+
+    poly_transformer.fit(poly_features)
+
+    poly_features = poly_transformer.transform(poly_features)
+    poly_features_test = poly_transformer.transform(poly_features_test)
+
+    # create a dataframe of the features
+    poly_features = pd.DataFrame(poly_features,
+                                 columns=poly_transformer.get_feature_names(numeric_cols))
+
+    # add in the target
+    poly_features[target] = poly_target
+
+    # put test features into dataframe
+    poly_features_test = pd.DataFrame(poly_features_test,
+                                      columns=poly_transformer.get_feature_names(numeric_cols))
+
+    # merge polynomial features into training dataframe
+    poly_features[unique_id] = train[unique_id]
+    train_poly = train.merge(poly_features, on=unique_id, how='left')
+
+    # merge polynomial features into testing dataframe
+    poly_features_test[unique_id] = test[unique_id]
+    test_poly = test.merge(poly_features_test, on=unique_id, how='left')
+
+    # align the dataframes
+    train_poly, test_poly = train_poly.align(test_poly, join='inner', axis=1)
+
+    print(f'{((time() - start_time) / 60):.0f} mins\n')
+
+    return train_poly, test_poly
+
+
+# arithmetic features
 
 
 def get_arithmetic_features(train, test, unique_id, target, cols):
@@ -378,6 +433,13 @@ def get_arithmetic_features(train, test, unique_id, target, cols):
     if len(numeric_cols) < 100:
         for i1 in range(0, len(numeric_cols)):
             col1 = numeric_cols[i1]
+
+            # powers
+            train[f'{col1} squared '] = train[col1] ** 2
+            train[f'{col1} cubed '] = train[col1] ** 3
+            test[f'{col1} squared '] = test[col1] ** 2
+            test[f'{col1} cubed '] = test[col1] ** 3
+
             for i2 in range(i1 + 1, len(numeric_cols)):
                 col2 = numeric_cols[i2]
 
@@ -437,6 +499,8 @@ def run():
     train, test, most_important_cols = get_feature_importance(train, test, unique_id, target)
 
     train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
+
+    # train, test = get_polynomial_features(train, test, unique_id, target)
 
     train, test = get_categorical_data(train, test, unique_id, target)
 
