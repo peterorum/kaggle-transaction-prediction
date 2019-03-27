@@ -13,6 +13,7 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelEncoder
 
 pd.options.display.float_format = '{:.4f}'.format
@@ -25,6 +26,11 @@ is_kaggle = os.environ['HOME'] == '/tmp'
 zipext = '' if is_kaggle else '.zip'
 train_file = 'train'  # if is_kaggle else 'sample'
 
+# params
+fold_splits = 5
+stop_rounds = 100
+verbose_eval = 500
+
 start_time = time()
 
 
@@ -32,19 +38,38 @@ def evaluate(train, test, unique_id, target):
 
     print('evaluate')
 
-    # binary
-    # 'metric': 'auc',
-    lgb_model = lgb.LGBMClassifier(nthread=4, n_jobs=-1, verbose=-1, objective='binary', metric='auc')
+    # kfolds
+    folds = KFold(n_splits=fold_splits, shuffle=True, random_state=1)
 
     x_train = train.drop([target, unique_id], axis=1)
     y_train = train[target]
 
     x_test = test[x_train.columns]
 
-    lgb_model.fit(x_train, y_train)
+    # binary, auc
+    lgb_model = lgb.LGBMClassifier(nthread=4, n_jobs=-1, verbose=-1, objective='binary', metric='auc',
+                                   bagging_freq=5, bagging_fraction=0.4, boost_from_average='false',
+                                   boost='gbdt', feature_fraction=0.05, learning_rate=0.01, max_depth=-1,
+                                   min_data_in_leaf=80, min_sum_hessian_in_leaf=10.0, num_leaves=13,
+                                   num_threads=8, tree_learner='serial')
 
-    train_predictions = lgb_model.predict(x_train)
-    test_predictions = lgb_model.predict(x_test)
+    train_predictions = np.zeros(len(train))
+    test_predictions = np.zeros(test.shape[0])
+
+    for fold_n, (train_index, test_index) in enumerate(folds.split(x_train)):
+        print('fold', fold_n)
+        X_train, X_valid = x_train.iloc[train_index], x_train.iloc[test_index]
+        Y_train, Y_valid = y_train.iloc[train_index], y_train.iloc[test_index]
+
+        lgb_model.fit(X_train, Y_train,
+                      eval_set=[(X_train, Y_train), (X_valid, Y_valid)], eval_metric='auc',
+                      verbose=verbose_eval, early_stopping_rounds=stop_rounds)
+
+        train_prediction = lgb_model.predict(x_train, num_iteration=lgb_model.best_iteration_)
+        train_predictions += train_prediction / fold_splits
+
+        test_prediction = lgb_model.predict(x_test, num_iteration=lgb_model.best_iteration_)
+        test_predictions += test_prediction / fold_splits
 
     train_score = roc_auc_score(y_train, train_predictions)
 
@@ -366,32 +391,6 @@ def get_collinear_features(train, test, unique_id, target):
     return train, test
 
 
-# statistical features
-
-
-def get_statistical_features(train, test, unique_id, target):
-
-    print('get_statistical_features')
-
-    numeric_cols = [col for col in train.columns
-                    if (train[col].dtype == 'int64') | (train[col].dtype == 'float64')]
-
-    numeric_cols = remove_keys(numeric_cols, [unique_id, target])
-
-    for df in [train, test]:
-        df['sum'] = df[numeric_cols].sum(axis=1)
-        df['min'] = df[numeric_cols].min(axis=1)
-        df['max'] = df[numeric_cols].max(axis=1)
-        df['mean'] = df[numeric_cols].mean(axis=1)
-        df['std'] = df[numeric_cols].std(axis=1)
-        df['skew'] = df[numeric_cols].skew(axis=1)
-        df['kurt'] = df[numeric_cols].kurtosis(axis=1)
-        df['med'] = df[numeric_cols].median(axis=1)
-
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
-
-    return train, test
-
 # arithmetic features
 
 
@@ -461,27 +460,25 @@ def run():
     train = pd.read_csv(f'../input/{train_file}.csv{zipext}')
     test = pd.read_csv(f'../input/test.csv{zipext}')
 
-    train, test = get_many_missing_values(train, test, unique_id, target)
+    # train, test = get_many_missing_values(train, test, unique_id, target)
 
-    train, test = replace_missing_values(train, test, unique_id, target)
+    # train, test = replace_missing_values(train, test, unique_id, target)
 
-    train, test = get_column_differences(train, test, unique_id, target)
+    # train, test = get_column_differences(train, test, unique_id, target)
 
-    # train, test = get_statistical_features(train, test, unique_id, target)
+    # train, test = get_custom_features(train, test, unique_id, target)
 
-    train, test = get_custom_features(train, test, unique_id, target)
+    # train, test, most_important_cols = get_feature_importance(train, test, unique_id, target)
 
-    train, test, most_important_cols = get_feature_importance(train, test, unique_id, target)
+    # train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
 
-    train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
+    # train, test = get_categorical_data(train, test, unique_id, target)
 
-    train, test = get_categorical_data(train, test, unique_id, target)
+    # train, test = get_collinear_features(train, test, unique_id, target)
 
-    train, test = get_collinear_features(train, test, unique_id, target)
+    # train, test = get_feature_selection(train, test, unique_id, target)
 
-    train, test = get_feature_selection(train, test, unique_id, target)
-
-    train, test, _ = get_feature_importance(train, test, unique_id, target)
+    # train, test, _ = get_feature_importance(train, test, unique_id, target)
 
     # ----------
 
