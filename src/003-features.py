@@ -368,13 +368,13 @@ def get_collinear_features(train, test, unique_id, target):
 # polynomial features
 
 
-def get_polynomial_features(train, test, unique_id, target):
+def get_polynomial_features(train, test, unique_id, target, cols):
 
     print('get_polynomial_features')
 
     # make a new dataframe for polynomial features
 
-    numeric_cols = [col for col in train.columns
+    numeric_cols = [col for col in cols
                     if (col != target) & (col != unique_id) &
                     ((train[col].dtype == 'int64') | (train[col].dtype == 'float64'))]
 
@@ -500,7 +500,7 @@ def run():
 
     train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
 
-    # train, test = get_polynomial_features(train, test, unique_id, target)
+    train, test = get_polynomial_features(train, test, unique_id, target, most_important_cols)
 
     train, test = get_categorical_data(train, test, unique_id, target)
 
