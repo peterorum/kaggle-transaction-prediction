@@ -14,7 +14,6 @@ from sklearn.metrics import roc_auc_score
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import PolynomialFeatures
 
 pd.options.display.float_format = '{:.4f}'.format
 pd.set_option('display.max_columns', None)
@@ -365,59 +364,6 @@ def get_collinear_features(train, test, unique_id, target):
     return train, test
 
 
-# polynomial features
-
-
-def get_polynomial_features(train, test, unique_id, target, cols):
-
-    print('get_polynomial_features')
-
-    # make a new dataframe for polynomial features
-
-    numeric_cols = [col for col in cols
-                    if (col != target) & (col != unique_id) &
-                    ((train[col].dtype == 'int64') | (train[col].dtype == 'float64'))]
-
-    poly_features = train[numeric_cols]
-    poly_features_test = test[numeric_cols]
-
-    poly_target = train[target]
-
-    # specify degree
-    poly_transformer = PolynomialFeatures(degree=2)
-
-    poly_transformer.fit(poly_features)
-
-    poly_features = poly_transformer.transform(poly_features)
-    poly_features_test = poly_transformer.transform(poly_features_test)
-
-    # create a dataframe of the features
-    poly_features = pd.DataFrame(poly_features,
-                                 columns=poly_transformer.get_feature_names(numeric_cols))
-
-    # add in the target
-    poly_features[target] = poly_target
-
-    # put test features into dataframe
-    poly_features_test = pd.DataFrame(poly_features_test,
-                                      columns=poly_transformer.get_feature_names(numeric_cols))
-
-    # merge polynomial features into training dataframe
-    poly_features[unique_id] = train[unique_id]
-    train_poly = train.merge(poly_features, on=unique_id, how='left')
-
-    # merge polynomial features into testing dataframe
-    poly_features_test[unique_id] = test[unique_id]
-    test_poly = test.merge(poly_features_test, on=unique_id, how='left')
-
-    # align the dataframes
-    train_poly, test_poly = train_poly.align(test_poly, join='inner', axis=1)
-
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
-
-    return train_poly, test_poly
-
-
 # arithmetic features
 
 
@@ -430,36 +376,35 @@ def get_arithmetic_features(train, test, unique_id, target, cols):
 
     numeric_cols = remove_keys(numeric_cols, [unique_id, target])
 
-    if len(numeric_cols) < 100:
-        for i1 in range(0, len(numeric_cols)):
-            col1 = numeric_cols[i1]
+    for i1 in range(0, len(numeric_cols)):
+        col1 = numeric_cols[i1]
 
-            # powers
-            train[f'{col1} squared '] = train[col1] ** 2
-            train[f'{col1} cubed '] = train[col1] ** 3
-            test[f'{col1} squared '] = test[col1] ** 2
-            test[f'{col1} cubed '] = test[col1] ** 3
+        # powers
+        train[f'{col1} squared'] = train[col1] ** 2
+        test[f'{col1} squared'] = test[col1] ** 2
+        train[f'{col1} cubed'] = train[col1] ** 3
+        test[f'{col1} cubed'] = test[col1] ** 3
+        train[f'{col1}^4'] = train[col1] ** 4
+        test[f'{col1}^4'] = test[col1] ** 4
 
-            for i2 in range(i1 + 1, len(numeric_cols)):
-                col2 = numeric_cols[i2]
+        for i2 in range(i1 + 1, len(numeric_cols)):
+            col2 = numeric_cols[i2]
 
-                train[f'{col1} by {col2}'] = train[col1] * train[col2]
-                test[f'{col1} by {col2}'] = test[col1] * test[col2]
+            train[f'{col1} by {col2}'] = train[col1] * train[col2]
+            test[f'{col1} by {col2}'] = test[col1] * test[col2]
 
-                train[f'{col1} plus {col2}'] = train[col1] + train[col2]
-                test[f'{col1} plus {col2}'] = test[col1] + test[col2]
+            train[f'{col1} plus {col2}'] = train[col1] + train[col2]
+            test[f'{col1} plus {col2}'] = test[col1] + test[col2]
 
-                train[f'{col1} minus {col2}'] = train[col1] - train[col2]
-                test[f'{col1} minus {col2}'] = test[col1] - test[col2]
+            train[f'{col1} minus {col2}'] = train[col1] - train[col2]
+            test[f'{col1} minus {col2}'] = test[col1] - test[col2]
 
-                if not (train[col2] == 0).any():
-                    train[f'{col1} on {col2}'] = train[col1] / train[col2]
-                    test[f'{col1} on {col2}'] = test[col1] / test[col2]
-                elif not (train[col1] == 0).any():
-                    train[f'{col2} on {col1}'] = train[col2] / train[col1]
-                    test[f'{col2} on {col1}'] = test[col2] / test[col1]
-    else:
-        print('Too many columns for arithmetic features')
+            if not (train[col2] == 0).any():
+                train[f'{col1} on {col2}'] = train[col1] / train[col2]
+                test[f'{col1} on {col2}'] = test[col1] / test[col2]
+            elif not (train[col1] == 0).any():
+                train[f'{col2} on {col1}'] = train[col2] / train[col1]
+                test[f'{col2} on {col1}'] = test[col2] / test[col1]
 
     print(f'{((time() - start_time) / 60):.0f} mins\n')
 
@@ -499,8 +444,6 @@ def run():
     train, test, most_important_cols = get_feature_importance(train, test, unique_id, target)
 
     train, test = get_arithmetic_features(train, test, unique_id, target, most_important_cols)
-
-    train, test = get_polynomial_features(train, test, unique_id, target, most_important_cols)
 
     train, test = get_categorical_data(train, test, unique_id, target)
 
