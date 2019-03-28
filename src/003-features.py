@@ -26,6 +26,13 @@ zipext = '' if is_kaggle else '.zip'
 train_file = 'train'  # if is_kaggle else 'sample'
 
 start_time = time()
+last_time = time()
+
+
+def timer():
+    print(f'{((time() - last_time) / 60):.0f} mins\n')
+
+    last_time = time()
 
 
 def evaluate(train, test, unique_id, target):
@@ -387,6 +394,13 @@ def get_statistical_features(train, test, unique_id, target):
         df['skew'] = df[numeric_cols].skew(axis=1)
         df['kurt'] = df[numeric_cols].kurtosis(axis=1)
         df['med'] = df[numeric_cols].median(axis=1)
+        df['perc_5'] = df[numeric_cols].apply(lambda x: np.percentile(x, 10), axis=1)
+        df['perc_10'] = df[numeric_cols].apply(lambda x: np.percentile(x, 10), axis=1)
+        df['perc_25'] = df[numeric_cols].apply(lambda x: np.percentile(x, 25), axis=1)
+        df['perc_50'] = df[numeric_cols].apply(lambda x: np.percentile(x, 50), axis=1)
+        df['perc_75'] = df[numeric_cols].apply(lambda x: np.percentile(x, 75), axis=1)
+        df['perc_95'] = df[numeric_cols].apply(lambda x: np.percentile(x, 99), axis=1)
+        df['perc_99'] = df[numeric_cols].apply(lambda x: np.percentile(x, 99), axis=1)
 
     print(f'{((time() - start_time) / 60):.0f} mins\n')
 
