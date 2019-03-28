@@ -1,6 +1,6 @@
 # feature importance
-# local score 0.909
-# kaggle score 0.854
+# local score 0.910
+# kaggle score 0.855
 # minimize score
 
 import os
@@ -30,7 +30,9 @@ last_time = time()
 
 
 def timer():
-    print(f'{((time() - last_time) / 60):.0f} mins\n')
+    global last_time
+
+    print(f'{((time() - last_time) / 60):.1f} mins\n')
 
     last_time = time()
 
@@ -55,7 +57,7 @@ def evaluate(train, test, unique_id, target):
 
     train_score = roc_auc_score(y_train, train_predictions)
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return test_predictions, train_score
 
@@ -91,7 +93,7 @@ def get_many_missing_values(train, test, unique_id, target):
         # restore after align
         train[target] = train_targets
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -150,7 +152,7 @@ def replace_missing_values(train, test, unique_id, target):
             if col in test.columns:
                 test[col].fillna(mode, inplace=True)
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -172,7 +174,7 @@ def get_column_differences(train, test, unique_id, target):
     if len(not_in_train) > 0:
         print(f'In test but not train\n{not_in_train}')
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -239,7 +241,7 @@ def get_categorical_data(train, test, unique_id, target):
         train[col] = lbl.transform(list(train[col].values.astype('str')))
         test[col] = lbl.transform(list(test[col].values.astype('str')))
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -274,7 +276,7 @@ def get_feature_selection(train, test, unique_id, target):
             if col in test.columns:
                 test.drop(col, axis=1, inplace=True)
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -342,7 +344,7 @@ def get_feature_importance(train, test, unique_id, target):
         train = train.drop(features_to_drop, axis=1)
         test = test.drop(features_to_drop, axis=1)
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test, most_important_features
 
@@ -368,7 +370,7 @@ def get_collinear_features(train, test, unique_id, target):
         train = train.drop(columns=to_drop, axis=1)
         test = test.drop(columns=to_drop, axis=1)
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -402,7 +404,7 @@ def get_statistical_features(train, test, unique_id, target):
         df['perc_95'] = df[numeric_cols].apply(lambda x: np.percentile(x, 99), axis=1)
         df['perc_99'] = df[numeric_cols].apply(lambda x: np.percentile(x, 99), axis=1)
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -448,7 +450,7 @@ def get_arithmetic_features(train, test, unique_id, target, cols):
                 train[f'{col2} on {col1}'] = train[col2] / train[col1]
                 test[f'{col2} on {col1}'] = test[col2] / test[col1]
 
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -458,7 +460,7 @@ def get_arithmetic_features(train, test, unique_id, target, cols):
 def get_custom_features(train, test, unique_id, target):
 
     print(f'get_custom_features')
-    print(f'{((time() - start_time) / 60):.0f} mins\n')
+    timer()
 
     return train, test
 
@@ -481,7 +483,7 @@ def run():
 
     train, test = get_column_differences(train, test, unique_id, target)
 
-    # train, test = get_statistical_features(train, test, unique_id, target)
+    train, test = get_statistical_features(train, test, unique_id, target)
 
     train, test = get_custom_features(train, test, unique_id, target)
 
